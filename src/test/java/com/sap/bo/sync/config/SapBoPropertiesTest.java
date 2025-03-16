@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for the SapBoProperties class
@@ -13,16 +12,11 @@ public class SapBoPropertiesTest {
 
     @Test
     public void testSapBoProperties() {
-        // Arrange
+        // Arrange & Act
         SapBoProperties properties = new SapBoProperties();
-        SapBoProperties.BoEnvironment source = new SapBoProperties.BoEnvironment();
-        SapBoProperties.BoEnvironment target = new SapBoProperties.BoEnvironment();
-        SapBoProperties.SyncProperties sync = new SapBoProperties.SyncProperties();
-        
-        // Act
-        properties.setSource(source);
-        properties.setTarget(target);
-        properties.setSync(sync);
+        properties.setSource(new SapBoProperties.BoEnvironment());
+        properties.setTarget(new SapBoProperties.BoEnvironment());
+        properties.setSync(new SapBoProperties.SyncProperties());
         
         // Assert
         assertNotNull(properties.getSource());
@@ -32,14 +26,13 @@ public class SapBoPropertiesTest {
     
     @Test
     public void testBoEnvironmentProperties() {
-        // Arrange
+        // Arrange & Act
         SapBoProperties.BoEnvironment environment = new SapBoProperties.BoEnvironment();
         String url = "http://example.com/bo";
         String username = "admin";
         String password = "password";
         String authType = "secEnterprise";
         
-        // Act
         environment.setUrl(url);
         environment.setUsername(username);
         environment.setPassword(password);
@@ -54,14 +47,13 @@ public class SapBoPropertiesTest {
     
     @Test
     public void testSyncProperties() {
-        // Arrange
+        // Arrange & Act
         SapBoProperties.SyncProperties syncProps = new SapBoProperties.SyncProperties();
         boolean enabled = true;
         boolean forceUpdate = false;
         int batchSize = 100;
         SapBoProperties.ScheduleProperties schedule = new SapBoProperties.ScheduleProperties();
         
-        // Act
         syncProps.setEnabled(enabled);
         syncProps.setForceUpdate(forceUpdate);
         syncProps.setBatchSize(batchSize);

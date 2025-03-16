@@ -14,7 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpMethod;
+// import org.springframework.http.HttpMethod; // Not used
 
 import java.util.ArrayList;
 import java.util.List;
@@ -63,8 +63,9 @@ public class SapBoServiceImplTest {
         // Arrange
         String folderJson = "{\"entries\": [{\"id\": \"folder1\", \"name\": \"Folder 1\", \"type\": \"Folder\"}, {\"id\": \"folder2\", \"name\": \"Folder 2\", \"type\": \"Folder\"}]}";
         
-        JsonNode rootNode = new ObjectMapper().readTree(folderJson);
-        JsonNode entriesNode = rootNode.path("entries");
+        ObjectMapper realMapper = new ObjectMapper();
+        JsonNode rootNode = realMapper.readTree(folderJson);
+        JsonNode entriesNode = rootNode.path("entries"); // Used for test setup
         
         List<SapBoObject> folders = new ArrayList<>();
         SapBoObject folder1 = new SapBoObject();
@@ -85,6 +86,8 @@ public class SapBoServiceImplTest {
         when(objectMapper.readTree(anyString())).thenReturn(rootNode);
         when(objectMapper.treeToValue(any(JsonNode.class), eq(SapBoObject.class)))
             .thenReturn(folder1, folder2);
+        when(objectMapper.readValue(anyString(), eq(SapBoObject.class)))
+            .thenReturn(folder1, folder2);
         
         // Act
         List<SapBoObject> result = sapBoService.getFolders("/Public");
@@ -99,8 +102,9 @@ public class SapBoServiceImplTest {
         // Arrange
         String reportsJson = "{\"entries\": [{\"id\": \"report1\", \"name\": \"Report 1\", \"type\": \"Report\", \"universeId\": \"universe1\"}, {\"id\": \"report2\", \"name\": \"Report 2\", \"type\": \"Report\", \"universeId\": \"universe2\"}]}";
         
-        JsonNode rootNode = new ObjectMapper().readTree(reportsJson);
-        JsonNode entriesNode = rootNode.path("entries");
+        ObjectMapper realMapper = new ObjectMapper();
+        JsonNode rootNode = realMapper.readTree(reportsJson);
+        JsonNode entriesNode = rootNode.path("entries"); // Used for test setup
         
         List<Report> reports = new ArrayList<>();
         Report report1 = new Report();
@@ -123,9 +127,11 @@ public class SapBoServiceImplTest {
         when(objectMapper.readTree(anyString())).thenReturn(rootNode);
         when(objectMapper.treeToValue(any(JsonNode.class), eq(Report.class)))
             .thenReturn(report1, report2);
+        when(objectMapper.readValue(anyString(), eq(Report.class)))
+            .thenReturn(report1, report2);
         
         // Act
-        List<Report> result = sapBoService.getReports("folder1");
+        List<Report> result = sapBoService.getReports("folder1", null, null);
         
         // Assert
         assertNotNull(result);
@@ -160,8 +166,9 @@ public class SapBoServiceImplTest {
         // Arrange
         String universesJson = "{\"entries\": [{\"id\": \"universe1\", \"name\": \"Universe 1\", \"type\": \"Universe\", \"connectionId\": \"conn1\"}, {\"id\": \"universe2\", \"name\": \"Universe 2\", \"type\": \"Universe\", \"connectionId\": \"conn2\"}]}";
         
-        JsonNode rootNode = new ObjectMapper().readTree(universesJson);
-        JsonNode entriesNode = rootNode.path("entries");
+        ObjectMapper realMapper = new ObjectMapper();
+        JsonNode rootNode = realMapper.readTree(universesJson);
+        JsonNode entriesNode = rootNode.path("entries"); // Used for test setup
         
         List<Universe> universes = new ArrayList<>();
         Universe universe1 = new Universe();
@@ -184,9 +191,11 @@ public class SapBoServiceImplTest {
         when(objectMapper.readTree(anyString())).thenReturn(rootNode);
         when(objectMapper.treeToValue(any(JsonNode.class), eq(Universe.class)))
             .thenReturn(universe1, universe2);
+        when(objectMapper.readValue(anyString(), eq(Universe.class)))
+            .thenReturn(universe1, universe2);
         
         // Act
-        List<Universe> result = sapBoService.getUniverses("folder1");
+        List<Universe> result = sapBoService.getUniverses("folder1", null, null);
         
         // Assert
         assertNotNull(result);
@@ -198,8 +207,9 @@ public class SapBoServiceImplTest {
         // Arrange
         String connectionsJson = "{\"entries\": [{\"id\": \"conn1\", \"name\": \"Connection 1\", \"type\": \"JDBC\", \"server\": \"server1.example.com\"}, {\"id\": \"conn2\", \"name\": \"Connection 2\", \"type\": \"JDBC\", \"server\": \"server2.example.com\"}]}";
         
-        JsonNode rootNode = new ObjectMapper().readTree(connectionsJson);
-        JsonNode entriesNode = rootNode.path("entries");
+        ObjectMapper realMapper = new ObjectMapper();
+        JsonNode rootNode = realMapper.readTree(connectionsJson);
+        JsonNode entriesNode = rootNode.path("entries"); // Used for test setup
         
         List<Connection> connections = new ArrayList<>();
         Connection conn1 = new Connection();
@@ -222,9 +232,11 @@ public class SapBoServiceImplTest {
         when(objectMapper.readTree(anyString())).thenReturn(rootNode);
         when(objectMapper.treeToValue(any(JsonNode.class), eq(Connection.class)))
             .thenReturn(conn1, conn2);
+        when(objectMapper.readValue(anyString(), eq(Connection.class)))
+            .thenReturn(conn1, conn2);
         
         // Act
-        List<Connection> result = sapBoService.getConnections();
+        List<Connection> result = sapBoService.getConnections(null, null);
         
         // Assert
         assertNotNull(result);

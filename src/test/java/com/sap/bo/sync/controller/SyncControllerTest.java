@@ -1,7 +1,9 @@
 package com.sap.bo.sync.controller;
 
 import com.sap.bo.sync.model.SapBoObject;
+import com.sap.bo.sync.scheduler.SyncScheduler;
 import com.sap.bo.sync.service.SapBoService;
+import com.sap.bo.sync.service.SapBoServiceFactory;
 import com.sap.bo.sync.service.SyncService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,11 +14,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 /**
@@ -27,9 +33,15 @@ public class SyncControllerTest {
 
     @Mock
     private SyncService syncService;
+    
+    @Mock
+    private SyncScheduler syncScheduler;
 
     @Mock
     private SapBoService sapBoService;
+    
+    @Mock
+    private SapBoServiceFactory serviceFactory;
 
     @InjectMocks
     private SyncController syncController;
@@ -37,87 +49,92 @@ public class SyncControllerTest {
     @Test
     public void testSyncAll() {
         // Arrange
-        when(syncService.syncAll()).thenReturn(CompletableFuture.completedFuture(true));
+        when(syncScheduler.triggerSync(false)).thenReturn(CompletableFuture.completedFuture(5));
 
         // Act
-        ResponseEntity<String> response = syncController.syncAll();
+        ResponseEntity<Map<String, Object>> response = syncController.triggerSync(false);
 
         // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Sync started successfully", response.getBody());
+        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
+        Map<String, Object> body = response.getBody();
+        assertNotNull(body);
+        assertEquals("started", body.get("status"));
+        assertEquals("Synchronization started successfully", body.get("message"));
     }
 
-    @Test
-    public void testSyncFolders() {
-        // Arrange
-        when(syncService.syncFolders()).thenReturn(CompletableFuture.completedFuture(true));
-
-        // Act
-        ResponseEntity<String> response = syncController.syncFolders();
-
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Folder sync started successfully", response.getBody());
-    }
+    // Note: There is no syncFolders method in SyncController, so removing this test
 
     @Test
     public void testSyncReports() {
         // Arrange
-        when(syncService.syncReports()).thenReturn(CompletableFuture.completedFuture(true));
+        List<String> reportIds = null;
+        Map<String, String> options = new HashMap<>();
+        options.put("forceUpdate", "false");
+        when(syncService.syncReports(eq(reportIds), eq(options))).thenReturn(3);
 
         // Act
-        ResponseEntity<String> response = syncController.syncReports();
+        ResponseEntity<Map<String, Object>> response = syncController.syncReports(false, null);
 
         // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Reports sync started successfully", response.getBody());
+        Map<String, Object> body = response.getBody();
+        assertNotNull(body);
+        assertEquals(3, body.get("count"));
     }
 
     @Test
     public void testSyncUniverses() {
         // Arrange
-        when(syncService.syncUniverses()).thenReturn(CompletableFuture.completedFuture(true));
+        List<String> universeIds = null;
+        Map<String, String> options = new HashMap<>();
+        options.put("forceUpdate", "false");
+        when(syncService.syncUniverses(eq(universeIds), eq(options))).thenReturn(2);
 
         // Act
-        ResponseEntity<String> response = syncController.syncUniverses();
+        ResponseEntity<Map<String, Object>> response = syncController.syncUniverses(false, null);
 
         // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Universes sync started successfully", response.getBody());
+        Map<String, Object> body = response.getBody();
+        assertNotNull(body);
+        assertEquals(2, body.get("count"));
     }
 
     @Test
     public void testSyncConnections() {
         // Arrange
-        when(syncService.syncConnections()).thenReturn(CompletableFuture.completedFuture(true));
+        List<String> connectionIds = null;
+        Map<String, String> options = new HashMap<>();
+        options.put("forceUpdate", "false");
+        when(syncService.syncConnections(eq(connectionIds), eq(options))).thenReturn(1);
 
         // Act
-        ResponseEntity<String> response = syncController.syncConnections();
+        ResponseEntity<Map<String, Object>> response = syncController.syncConnections(false, null);
 
         // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals("Connections sync started successfully", response.getBody());
+        Map<String, Object> body = response.getBody();
+        assertNotNull(body);
+        assertEquals(1, body.get("count"));
     }
 
     @Test
-    public void testGetFolders() {
+    public void testSearch() {
         // Arrange
-        List<SapBoObject> folders = new ArrayList<>();
-        SapBoObject folder = new SapBoObject();
-        folder.setId("folder1");
-        folder.setName("Test Folder");
-        folders.add(folder);
-
-        when(sapBoService.getFolders(true)).thenReturn(folders);
-
+        List<SapBoObject> searchResults = new ArrayList<>();
+        SapBoObject result = new SapBoObject();
+        searchResults.add(result);
+        
+        when(serviceFactory.getSourceService()).thenReturn(sapBoService);
+        when(sapBoService.search(eq("test"), any(), eq(null), eq(null))).thenReturn(searchResults);
+        
         // Act
-        ResponseEntity<List<SapBoObject>> response = syncController.getFolders();
-
+        ResponseEntity<List<SapBoObject>> response = syncController.search("test", null);
+        
         // Assert
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals(1, response.getBody().size());
-        assertEquals("folder1", response.getBody().get(0).getId());
-        assertEquals("Test Folder", response.getBody().get(0).getName());
+        List<SapBoObject> body = response.getBody();
+        assertNotNull(body);
+        assertEquals(1, body.size());
     }
 }

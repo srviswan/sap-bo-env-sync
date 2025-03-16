@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -144,7 +145,10 @@ public class SyncController {
         log.info("Searching for objects with query: {} and types: {}", query, objectTypes);
         
         SapBoService sourceService = serviceFactory.getSourceService();
-        List<SapBoObject> results = sourceService.search(query, objectTypes);
+        // Add the missing parameters required by the search method
+        Date modifiedAfter = null; // No date filter
+        Map<String, String> options = null; // No additional options
+        List<SapBoObject> results = sourceService.search(query, objectTypes, modifiedAfter, options);
         
         return ResponseEntity.ok(results);
     }

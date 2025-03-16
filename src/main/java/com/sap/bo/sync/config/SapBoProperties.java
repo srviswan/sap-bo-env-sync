@@ -16,17 +16,29 @@ public class SapBoProperties {
     private BoEnvironment target;
     private SyncProperties sync = new SyncProperties();
     
-    // Explicit getters to ensure they're available during compilation
+    // Explicit getters and setters to ensure they're available during compilation
     public BoEnvironment getSource() {
         return source;
+    }
+    
+    public void setSource(BoEnvironment source) {
+        this.source = source;
     }
     
     public BoEnvironment getTarget() {
         return target;
     }
     
+    public void setTarget(BoEnvironment target) {
+        this.target = target;
+    }
+    
     public SyncProperties getSync() {
         return sync;
+    }
+    
+    public void setSync(SyncProperties sync) {
+        this.sync = sync;
     }
     
     /**
@@ -39,21 +51,37 @@ public class SapBoProperties {
         private String password;
         private String authType;
         
-        // Explicit getters
+        // Explicit getters and setters
         public String getUrl() {
             return url;
+        }
+        
+        public void setUrl(String url) {
+            this.url = url;
         }
         
         public String getUsername() {
             return username;
         }
         
+        public void setUsername(String username) {
+            this.username = username;
+        }
+        
         public String getPassword() {
             return password;
         }
         
+        public void setPassword(String password) {
+            this.password = password;
+        }
+        
         public String getAuthType() {
             return authType;
+        }
+        
+        public void setAuthType(String authType) {
+            this.authType = authType;
         }
     }
     
@@ -68,25 +96,45 @@ public class SapBoProperties {
         private ObjectsProperties objects = new ObjectsProperties();
         private int batchSize = 10; // Default batch size
         
-        // Explicit getters
+        // Explicit getters and setters
         public boolean isEnabled() {
             return enabled;
+        }
+        
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
         
         public boolean isForceUpdate() {
             return forceUpdate;
         }
         
+        public void setForceUpdate(boolean forceUpdate) {
+            this.forceUpdate = forceUpdate;
+        }
+        
         public ScheduleProperties getSchedule() {
             return schedule;
+        }
+        
+        public void setSchedule(ScheduleProperties schedule) {
+            this.schedule = schedule;
         }
         
         public ObjectsProperties getObjects() {
             return objects;
         }
         
+        public void setObjects(ObjectsProperties objects) {
+            this.objects = objects;
+        }
+        
         public int getBatchSize() {
             return batchSize;
+        }
+        
+        public void setBatchSize(int batchSize) {
+            this.batchSize = batchSize;
         }
     }
     
@@ -98,13 +146,21 @@ public class SapBoProperties {
         private boolean enabled = false;
         private String cron = "0 0 1 * * ?"; // Default: 1 AM daily
         
-        // Explicit getters
+        // Explicit getters and setters
         public boolean isEnabled() {
             return enabled;
         }
         
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+        
         public String getCron() {
             return cron;
+        }
+        
+        public void setCron(String cron) {
+            this.cron = cron;
         }
     }
     
@@ -118,21 +174,37 @@ public class SapBoProperties {
         private boolean connections = true;
         private boolean folders = true;
         
-        // Explicit getters
+        // Explicit getters and setters
         public boolean isReports() {
             return reports;
+        }
+        
+        public void setReports(boolean reports) {
+            this.reports = reports;
         }
         
         public boolean isUniverses() {
             return universes;
         }
         
+        public void setUniverses(boolean universes) {
+            this.universes = universes;
+        }
+        
         public boolean isConnections() {
             return connections;
         }
         
+        public void setConnections(boolean connections) {
+            this.connections = connections;
+        }
+        
         public boolean isFolders() {
             return folders;
+        }
+        
+        public void setFolders(boolean folders) {
+            this.folders = folders;
         }
     }
 }

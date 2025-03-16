@@ -50,6 +50,51 @@ public class SapBoObject {
     @JsonProperty("path")
     private String path;
     
+    // Explicit setter methods to ensure they're available during compilation
+    public void setId(String id) {
+        this.id = id;
+    }
+    
+    public void setCuid(String cuid) {
+        this.cuid = cuid;
+    }
+    
+    public void setName(String name) {
+        this.name = name;
+    }
+    
+    public void setDescription(String description) {
+        this.description = description;
+    }
+    
+    public void setType(String type) {
+        this.type = type;
+    }
+    
+    public void setParentId(String parentId) {
+        this.parentId = parentId;
+    }
+    
+    public void setParentCuid(String parentCuid) {
+        this.parentCuid = parentCuid;
+    }
+    
+    public void setCreated(Date created) {
+        this.created = created;
+    }
+    
+    public void setModified(Date modified) {
+        this.modified = modified;
+    }
+    
+    public void setOwner(String owner) {
+        this.owner = owner;
+    }
+    
+    public void setPath(String path) {
+        this.path = path;
+    }
+    
     @JsonProperty("properties")
     private Map<String, Object> properties;
     
@@ -105,7 +150,15 @@ public class SapBoObject {
         return properties;
     }
     
+    public void setProperties(Map<String, Object> properties) {
+        this.properties = properties;
+    }
+    
     public List<SapBoObject> getChildren() {
         return children;
+    }
+    
+    public void setChildren(List<SapBoObject> children) {
+        this.children = children;
     }
 }

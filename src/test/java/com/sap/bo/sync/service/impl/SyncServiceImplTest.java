@@ -194,9 +194,9 @@ public class SyncServiceImplTest {
     public void testSyncAll() {
         // Arrange
         when(sourceService.getFolders(null)).thenReturn(folders);
-        when(sourceService.getUniverses(null)).thenReturn(universes);
-        when(sourceService.getConnections()).thenReturn(connections);
-        when(sourceService.getReports(null)).thenReturn(reports);
+        when(sourceService.getUniverses(null, null, null)).thenReturn(universes);
+        when(sourceService.getConnections(null, null)).thenReturn(connections);
+        when(sourceService.getReports(null, null, null)).thenReturn(reports);
         
         // Act
         int result = syncService.syncAll(true);
@@ -205,9 +205,9 @@ public class SyncServiceImplTest {
         // We expect 5 objects to be synchronized (2 folders + 1 universe + 1 connection + 1 report)
         assertEquals(5, result);
         verify(sourceService, times(1)).getFolders(null);
-        verify(sourceService, times(1)).getUniverses(null);
-        verify(sourceService, times(1)).getConnections();
-        verify(sourceService, times(1)).getReports(null);
+        verify(sourceService, times(1)).getUniverses(null, null, null);
+        verify(sourceService, times(1)).getConnections(null, null);
+        verify(sourceService, times(1)).getReports(null, null, null);
     }
     
 

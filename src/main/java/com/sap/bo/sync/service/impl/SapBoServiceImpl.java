@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,13 +92,35 @@ public class SapBoServiceImpl implements SapBoService {
     }
 
     @Override
-    public List<Report> getReports(String folderId) {
+    public List<Report> getReports(String folderId, Date modifiedAfter, Map<String, String> options) {
         log.debug("Getting reports from folder: {}", folderId);
         
-        String endpoint = "/infostore/reports";
+        StringBuilder endpointBuilder = new StringBuilder("/infostore/reports");
+        boolean hasParam = false;
+        
         if (StringUtils.isNotBlank(folderId)) {
-            endpoint += "?folderId=" + folderId;
+            endpointBuilder.append("?folderId=").append(folderId);
+            hasParam = true;
         }
+        
+        if (modifiedAfter != null) {
+            endpointBuilder.append(hasParam ? "&" : "?");
+            endpointBuilder.append("modifiedAfter=").append(modifiedAfter.getTime());
+            hasParam = true;
+        }
+        
+        // Add additional filtering options
+        if (options != null) {
+            for (Map.Entry<String, String> entry : options.entrySet()) {
+                if (StringUtils.isNotBlank(entry.getValue())) {
+                    endpointBuilder.append(hasParam ? "&" : "?");
+                    endpointBuilder.append(entry.getKey()).append("=").append(entry.getValue());
+                    hasParam = true;
+                }
+            }
+        }
+        
+        String endpoint = endpointBuilder.toString();
         
         try {
             String response = restClient.get(environment, endpoint, String.class);
@@ -189,13 +212,35 @@ public class SapBoServiceImpl implements SapBoService {
     }
 
     @Override
-    public List<Universe> getUniverses(String folderId) {
+    public List<Universe> getUniverses(String folderId, Date modifiedAfter, Map<String, String> options) {
         log.debug("Getting universes from folder: {}", folderId);
         
-        String endpoint = "/infostore/universes";
+        StringBuilder endpointBuilder = new StringBuilder("/infostore/universes");
+        boolean hasParam = false;
+        
         if (StringUtils.isNotBlank(folderId)) {
-            endpoint += "?folderId=" + folderId;
+            endpointBuilder.append("?folderId=").append(folderId);
+            hasParam = true;
         }
+        
+        if (modifiedAfter != null) {
+            endpointBuilder.append(hasParam ? "&" : "?");
+            endpointBuilder.append("modifiedAfter=").append(modifiedAfter.getTime());
+            hasParam = true;
+        }
+        
+        // Add additional filtering options
+        if (options != null) {
+            for (Map.Entry<String, String> entry : options.entrySet()) {
+                if (StringUtils.isNotBlank(entry.getValue())) {
+                    endpointBuilder.append(hasParam ? "&" : "?");
+                    endpointBuilder.append(entry.getKey()).append("=").append(entry.getValue());
+                    hasParam = true;
+                }
+            }
+        }
+        
+        String endpoint = endpointBuilder.toString();
         
         try {
             String response = restClient.get(environment, endpoint, String.class);
@@ -270,10 +315,29 @@ public class SapBoServiceImpl implements SapBoService {
     }
 
     @Override
-    public List<Connection> getConnections() {
+    public List<Connection> getConnections(Date modifiedAfter, Map<String, String> options) {
         log.debug("Getting all connections");
         
-        String endpoint = "/infostore/connections";
+        StringBuilder endpointBuilder = new StringBuilder("/infostore/connections");
+        boolean hasParam = false;
+        
+        if (modifiedAfter != null) {
+            endpointBuilder.append("?modifiedAfter=").append(modifiedAfter.getTime());
+            hasParam = true;
+        }
+        
+        // Add additional filtering options
+        if (options != null) {
+            for (Map.Entry<String, String> entry : options.entrySet()) {
+                if (StringUtils.isNotBlank(entry.getValue())) {
+                    endpointBuilder.append(hasParam ? "&" : "?");
+                    endpointBuilder.append(entry.getKey()).append("=").append(entry.getValue());
+                    hasParam = true;
+                }
+            }
+        }
+        
+        String endpoint = endpointBuilder.toString();
         
         try {
             String response = restClient.get(environment, endpoint, String.class);
@@ -348,18 +412,33 @@ public class SapBoServiceImpl implements SapBoService {
     }
 
     @Override
-    public List<SapBoObject> search(String query, List<String> objectTypes) {
+    public List<SapBoObject> search(String query, List<String> objectTypes, Date modifiedAfter, Map<String, String> options) {
         log.debug("Searching for objects with query: {} and types: {}", query, objectTypes);
         
         if (StringUtils.isBlank(query)) {
             throw new SapBoApiException("Search query cannot be empty");
         }
         
-        String endpoint = "/infostore/search?query=" + query;
+        StringBuilder endpointBuilder = new StringBuilder("/infostore/search?query=").append(query);
         
         if (objectTypes != null && !objectTypes.isEmpty()) {
-            endpoint += "&types=" + String.join(",", objectTypes);
+            endpointBuilder.append("&types=").append(String.join(",", objectTypes));
         }
+        
+        if (modifiedAfter != null) {
+            endpointBuilder.append("&modifiedAfter=").append(modifiedAfter.getTime());
+        }
+        
+        // Add additional filtering options
+        if (options != null) {
+            for (Map.Entry<String, String> entry : options.entrySet()) {
+                if (StringUtils.isNotBlank(entry.getValue())) {
+                    endpointBuilder.append("&").append(entry.getKey()).append("=").append(entry.getValue());
+                }
+            }
+        }
+        
+        String endpoint = endpointBuilder.toString();
         
         try {
             String response = restClient.get(environment, endpoint, String.class);
@@ -383,5 +462,55 @@ public class SapBoServiceImpl implements SapBoService {
     // Helper enum for HTTP methods
     private enum HttpMethod {
         GET, POST, PUT, DELETE
+    }
+    
+    @Override
+    public List<SapBoObject> getDependencies(String universeId, List<String> dependencyTypes) {
+        log.debug("Getting dependencies for universe with ID: {}", universeId);
+        
+        if (StringUtils.isBlank(universeId)) {
+            throw new SapBoApiException("Universe ID cannot be empty");
+        }
+        
+        StringBuilder endpointBuilder = new StringBuilder("/infostore/universes/")
+                .append(universeId)
+                .append("/dependencies");
+        
+        if (dependencyTypes != null && !dependencyTypes.isEmpty()) {
+            endpointBuilder.append("?types=").append(String.join(",", dependencyTypes));
+        }
+        
+        String endpoint = endpointBuilder.toString();
+        
+        try {
+            String response = restClient.get(environment, endpoint, String.class);
+            JsonNode rootNode = objectMapper.readTree(response);
+            JsonNode entriesNode = rootNode.path("entries");
+            
+            List<SapBoObject> dependencies = new ArrayList<>();
+            if (entriesNode.isArray()) {
+                for (JsonNode entryNode : entriesNode) {
+                    String type = entryNode.path("type").asText();
+                    SapBoObject dependency;
+                    
+                    // Convert to appropriate type based on the object type
+                    if ("report".equals(type)) {
+                        dependency = objectMapper.treeToValue(entryNode, Report.class);
+                    } else if ("universe".equals(type)) {
+                        dependency = objectMapper.treeToValue(entryNode, Universe.class);
+                    } else if ("connection".equals(type)) {
+                        dependency = objectMapper.treeToValue(entryNode, Connection.class);
+                    } else {
+                        dependency = objectMapper.treeToValue(entryNode, SapBoObject.class);
+                    }
+                    
+                    dependencies.add(dependency);
+                }
+            }
+            
+            return dependencies;
+        } catch (Exception e) {
+            throw new SapBoApiException("Error getting universe dependencies", e);
+        }
     }
 }

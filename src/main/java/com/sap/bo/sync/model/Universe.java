@@ -32,25 +32,45 @@ public class Universe extends SapBoObject {
     @JsonProperty("objects")
     private List<UniverseObject> objects;
     
-    // Explicit getters to ensure they're available during compilation
+    // Explicit getters and setters to ensure they're available during compilation
     public String getConnectionId() {
         return connectionId;
+    }
+    
+    public void setConnectionId(String connectionId) {
+        this.connectionId = connectionId;
     }
     
     public String getConnectionName() {
         return connectionName;
     }
     
+    public void setConnectionName(String connectionName) {
+        this.connectionName = connectionName;
+    }
+    
     public String getDataSourceType() {
         return dataSourceType;
+    }
+    
+    public void setDataSourceType(String dataSourceType) {
+        this.dataSourceType = dataSourceType;
     }
     
     public String getContent() {
         return content;
     }
     
+    public void setContent(String content) {
+        this.content = content;
+    }
+    
     public List<UniverseObject> getObjects() {
         return objects;
+    }
+    
+    public void setObjects(List<UniverseObject> objects) {
+        this.objects = objects;
     }
     
     /**
@@ -75,25 +95,45 @@ public class Universe extends SapBoObject {
         @JsonProperty("sql")
         private String sql;
         
-        // Explicit getters
+        // Explicit getters and setters
         public String getId() {
             return id;
+        }
+        
+        public void setId(String id) {
+            this.id = id;
         }
         
         public String getName() {
             return name;
         }
         
+        public void setName(String name) {
+            this.name = name;
+        }
+        
         public String getType() {
             return type;
+        }
+        
+        public void setType(String type) {
+            this.type = type;
         }
         
         public String getDescription() {
             return description;
         }
         
+        public void setDescription(String description) {
+            this.description = description;
+        }
+        
         public String getSql() {
             return sql;
+        }
+        
+        public void setSql(String sql) {
+            this.sql = sql;
         }
     }
 }

@@ -5,6 +5,7 @@ import com.sap.bo.sync.model.Report;
 import com.sap.bo.sync.model.SapBoObject;
 import com.sap.bo.sync.model.Universe;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -23,9 +24,11 @@ public interface SapBoService {
     /**
      * Get a list of reports
      * @param folderId Optional folder ID to get reports from
+     * @param modifiedAfter Optional date to filter reports modified after this date
+     * @param options Additional options for filtering
      * @return List of reports
      */
-    List<Report> getReports(String folderId);
+    List<Report> getReports(String folderId, Date modifiedAfter, Map<String, String> options);
     
     /**
      * Get a specific report by ID
@@ -51,9 +54,11 @@ public interface SapBoService {
     /**
      * Get a list of universes
      * @param folderId Optional folder ID to get universes from
+     * @param modifiedAfter Optional date to filter universes modified after this date
+     * @param options Additional options for filtering
      * @return List of universes
      */
-    List<Universe> getUniverses(String folderId);
+    List<Universe> getUniverses(String folderId, Date modifiedAfter, Map<String, String> options);
     
     /**
      * Get a specific universe by ID
@@ -71,9 +76,11 @@ public interface SapBoService {
     
     /**
      * Get a list of connections
+     * @param modifiedAfter Optional date to filter connections modified after this date
+     * @param options Additional options for filtering
      * @return List of connections
      */
-    List<Connection> getConnections();
+    List<Connection> getConnections(Date modifiedAfter, Map<String, String> options);
     
     /**
      * Get a specific connection by ID
@@ -93,7 +100,17 @@ public interface SapBoService {
      * Search for objects by name or other criteria
      * @param query Search query
      * @param objectTypes Types of objects to search for
+     * @param modifiedAfter Optional date to filter objects modified after this date
+     * @param options Additional options for filtering
      * @return List of matching objects
      */
-    List<SapBoObject> search(String query, List<String> objectTypes);
+    List<SapBoObject> search(String query, List<String> objectTypes, Date modifiedAfter, Map<String, String> options);
+    
+    /**
+     * Get dependent objects for a specific universe
+     * @param universeId Universe ID to get dependencies for
+     * @param dependencyTypes Types of dependencies to retrieve (reports, connections, etc.)
+     * @return List of dependent objects
+     */
+    List<SapBoObject> getDependencies(String universeId, List<String> dependencyTypes);
 }
