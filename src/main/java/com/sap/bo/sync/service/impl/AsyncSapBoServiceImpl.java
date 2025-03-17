@@ -20,7 +20,14 @@ public class AsyncSapBoServiceImpl implements AsyncSapBoService {
 
     private static final Logger log = LoggerFactory.getLogger(AsyncSapBoServiceImpl.class);
     
-    private final SyncService syncService;
+    private SyncService syncService;
+    
+    /**
+     * No-arg constructor for Spring bean instantiation
+     */
+    public AsyncSapBoServiceImpl() {
+        // Default constructor for Spring
+    }
     
     public AsyncSapBoServiceImpl(SyncService syncService) {
         this.syncService = syncService;

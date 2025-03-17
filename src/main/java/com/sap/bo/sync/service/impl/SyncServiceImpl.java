@@ -38,9 +38,16 @@ public class SyncServiceImpl implements SyncService {
     
     private static final Logger log = LoggerFactory.getLogger(SyncServiceImpl.class);
 
-    private final SapBoServiceFactory serviceFactory;
-    private final SapBoProperties sapBoProperties;
-    private final ObjectMapper objectMapper;
+    private SapBoServiceFactory serviceFactory;
+    private SapBoProperties sapBoProperties;
+    private ObjectMapper objectMapper;
+
+    /**
+     * No-arg constructor for Spring bean instantiation
+     */
+    public SyncServiceImpl() {
+        // Default constructor for Spring
+    }
 
     public SyncServiceImpl(SapBoServiceFactory serviceFactory, SapBoProperties sapBoProperties, ObjectMapper objectMapper) {
         this.serviceFactory = serviceFactory;

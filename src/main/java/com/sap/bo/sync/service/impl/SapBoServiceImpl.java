@@ -28,12 +28,19 @@ public class SapBoServiceImpl implements SapBoService {
 
     private static final Logger log = LoggerFactory.getLogger(SapBoServiceImpl.class);
 
-    private final SapBoRestClient restClient;
-    private final SapBoProperties sapBoProperties;
-    private final ObjectMapper objectMapper;
+    private SapBoRestClient restClient;
+    private SapBoProperties sapBoProperties;
+    private ObjectMapper objectMapper;
     
     // Environment to use for this service instance
     private SapBoProperties.BoEnvironment environment;
+
+    /**
+     * No-arg constructor for Spring bean instantiation
+     */
+    public SapBoServiceImpl() {
+        this.environment = new SapBoProperties.BoEnvironment(); // Create default environment
+    }
 
     /**
      * Constructor that uses the source environment by default
