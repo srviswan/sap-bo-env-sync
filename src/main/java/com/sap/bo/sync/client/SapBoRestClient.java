@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -25,6 +26,7 @@ import java.util.Map;
  * REST client for communicating with SAP Business Objects API
  */
 @Component
+@Profile("!mock")
 public class SapBoRestClient {
 
     private static final Logger log = LoggerFactory.getLogger(SapBoRestClient.class);
