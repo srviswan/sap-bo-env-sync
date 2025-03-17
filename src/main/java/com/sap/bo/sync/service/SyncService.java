@@ -4,6 +4,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 /**
  * Service interface for synchronizing SAP Business Objects between environments
  */
@@ -89,4 +91,30 @@ public interface SyncService {
      * @return Number of objects synchronized
      */
     int syncIncremental(Date modifiedAfter, List<String> folderIds, boolean forceUpdate);
+    
+    /**
+     * Compare server configurations between source and target environments
+     * @param configType Type of configuration to compare (e.g., "server", "cluster", "database")
+     * @param options Additional options for filtering
+     * @return Comparison result as JSON
+     */
+    JsonNode compareServerConfigs(String configType, Map<String, String> options);
+    
+    /**
+     * Compare cluster configurations between source and target environments
+     * @param clusterId Optional cluster ID to compare configuration for
+     * @param options Additional options for filtering
+     * @return Comparison result as JSON
+     */
+    JsonNode compareClusterConfigs(String clusterId, Map<String, String> options);
+    
+    /**
+     * Compare configurations between two custom environments
+     * @param env1 First environment name
+     * @param env2 Second environment name
+     * @param configType Type of configuration to compare
+     * @param options Additional options for filtering
+     * @return Comparison result as JSON
+     */
+    JsonNode compareConfigs(String env1, String env2, String configType, Map<String, String> options);
 }

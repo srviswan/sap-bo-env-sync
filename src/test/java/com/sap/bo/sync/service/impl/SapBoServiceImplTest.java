@@ -26,6 +26,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Unit tests for the SapBoServiceImpl class
  */
@@ -258,5 +261,49 @@ public class SapBoServiceImplTest {
         // Assert
         assertNotNull(result);
         assertEquals(new String(reportContent), new String(result));
+    }
+    
+    @Test
+    public void testGetServerConfig() throws Exception {
+        // Arrange
+        String configJson = "{\"serverName\": \"BO_SERVER\", \"version\": \"4.3\", \"settings\": {\"maxConnections\": 100}}";
+        ObjectMapper realMapper = new ObjectMapper();
+        JsonNode configNode = realMapper.readTree(configJson);
+        
+        Map<String, String> options = new HashMap<>();
+        options.put("includeDetails", "true");
+        
+        when(restClient.get(any(SapBoProperties.BoEnvironment.class), anyString(), eq(String.class)))
+            .thenReturn(configJson);
+        when(objectMapper.readTree(anyString())).thenReturn(configNode);
+        
+        // Act
+        JsonNode result = sapBoService.getServerConfig("server", options);
+        
+        // Assert
+        assertNotNull(result);
+        assertEquals(configNode, result);
+    }
+    
+    @Test
+    public void testGetClusterConfig() throws Exception {
+        // Arrange
+        String configJson = "{\"clusterId\": \"cluster1\", \"nodes\": [{\"name\": \"node1\", \"status\": \"running\"}]}";
+        ObjectMapper realMapper = new ObjectMapper();
+        JsonNode configNode = realMapper.readTree(configJson);
+        
+        Map<String, String> options = new HashMap<>();
+        options.put("includeDetails", "true");
+        
+        when(restClient.get(any(SapBoProperties.BoEnvironment.class), anyString(), eq(String.class)))
+            .thenReturn(configJson);
+        when(objectMapper.readTree(anyString())).thenReturn(configNode);
+        
+        // Act
+        JsonNode result = sapBoService.getClusterConfig("cluster1", options);
+        
+        // Assert
+        assertNotNull(result);
+        assertEquals(configNode, result);
     }
 }

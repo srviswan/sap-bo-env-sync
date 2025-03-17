@@ -1,6 +1,5 @@
 package com.sap.bo.sync.service.impl;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sap.bo.sync.client.SapBoRestClient;
@@ -17,9 +16,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -199,6 +196,8 @@ public class SapBoServiceImpl implements SapBoService {
             }
             
             String response;
+            
+            // Implementation for saving report would go here
             if (method == HttpMethod.POST) {
                 response = restClient.post(environment, endpoint, report, String.class);
             } else {
@@ -302,6 +301,8 @@ public class SapBoServiceImpl implements SapBoService {
             }
             
             String response;
+            
+            // Implementation for saving report would go here
             if (method == HttpMethod.POST) {
                 response = restClient.post(environment, endpoint, universe, String.class);
             } else {
@@ -399,6 +400,8 @@ public class SapBoServiceImpl implements SapBoService {
             }
             
             String response;
+            
+            // Implementation for saving report would go here
             if (method == HttpMethod.POST) {
                 response = restClient.post(environment, endpoint, connection, String.class);
             } else {
@@ -511,6 +514,72 @@ public class SapBoServiceImpl implements SapBoService {
             return dependencies;
         } catch (Exception e) {
             throw new SapBoApiException("Error getting universe dependencies", e);
+        }
+    }
+    
+    @Override
+    public JsonNode getServerConfig(String configType, Map<String, String> options) {
+        log.debug("Getting server configuration for type: {}", configType);
+        
+        StringBuilder endpointBuilder = new StringBuilder("/admin/serverconfig");
+        boolean hasParam = false;
+        
+        if (StringUtils.isNotBlank(configType)) {
+            endpointBuilder.append("?type=").append(configType);
+            hasParam = true;
+        }
+        
+        // Add additional filtering options
+        if (options != null) {
+            for (Map.Entry<String, String> entry : options.entrySet()) {
+                if (StringUtils.isNotBlank(entry.getValue())) {
+                    endpointBuilder.append(hasParam ? "&" : "?");
+                    endpointBuilder.append(entry.getKey()).append("=").append(entry.getValue());
+                    hasParam = true;
+                }
+            }
+        }
+        
+        String endpoint = endpointBuilder.toString();
+        
+        try {
+            String response = restClient.get(environment, endpoint, String.class);
+            return objectMapper.readTree(response);
+        } catch (Exception e) {
+            throw new SapBoApiException("Error getting server configuration", e);
+        }
+    }
+    
+    @Override
+    public JsonNode getClusterConfig(String clusterId, Map<String, String> options) {
+        log.debug("Getting cluster configuration for cluster ID: {}", clusterId);
+        
+        StringBuilder endpointBuilder = new StringBuilder("/admin/clusterconfig");
+        boolean hasParam = false;
+        
+        if (StringUtils.isNotBlank(clusterId)) {
+            endpointBuilder.append("?clusterId=").append(clusterId);
+            hasParam = true;
+        }
+        
+        // Add additional filtering options
+        if (options != null) {
+            for (Map.Entry<String, String> entry : options.entrySet()) {
+                if (StringUtils.isNotBlank(entry.getValue())) {
+                    endpointBuilder.append(hasParam ? "&" : "?");
+                    endpointBuilder.append(entry.getKey()).append("=").append(entry.getValue());
+                    hasParam = true;
+                }
+            }
+        }
+        
+        String endpoint = endpointBuilder.toString();
+        
+        try {
+            String response = restClient.get(environment, endpoint, String.class);
+            return objectMapper.readTree(response);
+        } catch (Exception e) {
+            throw new SapBoApiException("Error getting cluster configuration", e);
         }
     }
 }

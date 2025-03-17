@@ -1,5 +1,6 @@
 package com.sap.bo.sync.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.sap.bo.sync.model.SapBoObject;
 import com.sap.bo.sync.scheduler.SyncScheduler;
 import com.sap.bo.sync.service.SapBoService;
@@ -151,5 +152,65 @@ public class SyncController {
         List<SapBoObject> results = sourceService.search(query, objectTypes, modifiedAfter, options);
         
         return ResponseEntity.ok(results);
+    }
+    
+    /**
+     * Compare server configurations between source and target environments
+     */
+    @GetMapping("/compare/server")
+    public ResponseEntity<JsonNode> compareServerConfigs(
+            @RequestParam(value = "configType", defaultValue = "server") String configType,
+            @RequestParam(value = "includeDetails", defaultValue = "true") boolean includeDetails) {
+        
+        log.info("Comparing server configurations of type: {} with includeDetails={}", configType, includeDetails);
+        
+        Map<String, String> options = new HashMap<>();
+        options.put("includeDetails", String.valueOf(includeDetails));
+        
+        JsonNode result = syncService.compareServerConfigs(configType, options);
+        
+        return ResponseEntity.ok(result);
+    }
+    
+    /**
+     * Compare cluster configurations between source and target environments
+     */
+    @GetMapping("/compare/cluster")
+    public ResponseEntity<JsonNode> compareClusterConfigs(
+            @RequestParam(value = "clusterId", required = false) String clusterId,
+            @RequestParam(value = "includeDetails", defaultValue = "true") boolean includeDetails) {
+        
+        log.info("Comparing cluster configurations for clusterId: {} with includeDetails={}", clusterId, includeDetails);
+        
+        Map<String, String> options = new HashMap<>();
+        options.put("includeDetails", String.valueOf(includeDetails));
+        
+        JsonNode result = syncService.compareClusterConfigs(clusterId, options);
+        
+        return ResponseEntity.ok(result);
+    }
+    
+    /**
+     * Compare configurations between two custom environments
+     */
+    @GetMapping("/compare/configs")
+    public ResponseEntity<JsonNode> compareConfigs(
+            @RequestParam("env1") String env1,
+            @RequestParam("env2") String env2,
+            @RequestParam("configType") String configType,
+            @RequestParam(value = "clusterId", required = false) String clusterId,
+            @RequestParam(value = "includeDetails", defaultValue = "true") boolean includeDetails) {
+        
+        log.info("Comparing {} configurations between environments {} and {}", configType, env1, env2);
+        
+        Map<String, String> options = new HashMap<>();
+        if (clusterId != null) {
+            options.put("clusterId", clusterId);
+        }
+        options.put("includeDetails", String.valueOf(includeDetails));
+        
+        JsonNode result = syncService.compareConfigs(env1, env2, configType, options);
+        
+        return ResponseEntity.ok(result);
     }
 }

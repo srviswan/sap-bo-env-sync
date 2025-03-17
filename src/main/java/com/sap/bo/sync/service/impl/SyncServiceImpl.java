@@ -1,5 +1,8 @@
 package com.sap.bo.sync.service.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sap.bo.sync.config.SapBoProperties;
 import com.sap.bo.sync.exception.SapBoApiException;
 import com.sap.bo.sync.model.Connection;
@@ -37,10 +40,12 @@ public class SyncServiceImpl implements SyncService {
 
     private final SapBoServiceFactory serviceFactory;
     private final SapBoProperties sapBoProperties;
+    private final ObjectMapper objectMapper;
 
-    public SyncServiceImpl(SapBoServiceFactory serviceFactory, SapBoProperties sapBoProperties) {
+    public SyncServiceImpl(SapBoServiceFactory serviceFactory, SapBoProperties sapBoProperties, ObjectMapper objectMapper) {
         this.serviceFactory = serviceFactory;
         this.sapBoProperties = sapBoProperties;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -440,5 +445,139 @@ public class SyncServiceImpl implements SyncService {
             log.error("Error during incremental synchronization: {}", e.getMessage());
             throw new SapBoApiException("Failed to perform incremental synchronization", e);
         }
+    }
+    
+    @Override
+    public JsonNode compareServerConfigs(String configType, Map<String, String> options) {
+        log.info("Comparing server configurations of type: {}", configType);
+        
+        try {
+            SapBoService sourceService = serviceFactory.getSourceService();
+            SapBoService targetService = serviceFactory.getTargetService();
+            
+            // Get configurations from both environments
+            JsonNode sourceConfig = sourceService.getServerConfig(configType, options);
+            JsonNode targetConfig = targetService.getServerConfig(configType, options);
+            
+            // Create comparison result
+            ObjectNode result = objectMapper.createObjectNode();
+            result.set("source", sourceConfig);
+            result.set("target", targetConfig);
+            result.put("comparisonTimestamp", System.currentTimeMillis());
+            
+            // Add differences analysis
+            result.set("differences", analyzeDifferences(sourceConfig, targetConfig));
+            
+            return result;
+        } catch (Exception e) {
+            log.error("Error comparing server configurations: {}", e.getMessage());
+            throw new SapBoApiException("Failed to compare server configurations", e);
+        }
+    }
+    
+    @Override
+    public JsonNode compareClusterConfigs(String clusterId, Map<String, String> options) {
+        log.info("Comparing cluster configurations for cluster ID: {}", clusterId);
+        
+        try {
+            SapBoService sourceService = serviceFactory.getSourceService();
+            SapBoService targetService = serviceFactory.getTargetService();
+            
+            // Get configurations from both environments
+            JsonNode sourceConfig = sourceService.getClusterConfig(clusterId, options);
+            JsonNode targetConfig = targetService.getClusterConfig(clusterId, options);
+            
+            // Create comparison result
+            ObjectNode result = objectMapper.createObjectNode();
+            result.set("source", sourceConfig);
+            result.set("target", targetConfig);
+            result.put("comparisonTimestamp", System.currentTimeMillis());
+            
+            // Add differences analysis
+            result.set("differences", analyzeDifferences(sourceConfig, targetConfig));
+            
+            return result;
+        } catch (Exception e) {
+            log.error("Error comparing cluster configurations: {}", e.getMessage());
+            throw new SapBoApiException("Failed to compare cluster configurations", e);
+        }
+    }
+    
+    @Override
+    public JsonNode compareConfigs(String env1, String env2, String configType, Map<String, String> options) {
+        log.info("Comparing configurations between environments {} and {} of type: {}", env1, env2, configType);
+        
+        try {
+            // Get services for the specified environments
+            SapBoProperties.BoEnvironment environment1 = getEnvironmentByName(env1);
+            SapBoProperties.BoEnvironment environment2 = getEnvironmentByName(env2);
+            
+            if (environment1 == null || environment2 == null) {
+                throw new SapBoApiException("One or both environments not found: " + env1 + ", " + env2);
+            }
+            
+            SapBoService service1 = serviceFactory.getService(environment1);
+            SapBoService service2 = serviceFactory.getService(environment2);
+            
+            // Get configurations from both environments
+            JsonNode config1;
+            JsonNode config2;
+            
+            if ("server".equalsIgnoreCase(configType)) {
+                config1 = service1.getServerConfig(configType, options);
+                config2 = service2.getServerConfig(configType, options);
+            } else if ("cluster".equalsIgnoreCase(configType)) {
+                String clusterId = options != null ? options.get("clusterId") : null;
+                config1 = service1.getClusterConfig(clusterId, options);
+                config2 = service2.getClusterConfig(clusterId, options);
+            } else {
+                throw new SapBoApiException("Unsupported configuration type: " + configType);
+            }
+            
+            // Create comparison result
+            ObjectNode result = objectMapper.createObjectNode();
+            result.put("environment1", env1);
+            result.put("environment2", env2);
+            result.put("configType", configType);
+            result.set("config1", config1);
+            result.set("config2", config2);
+            result.put("comparisonTimestamp", System.currentTimeMillis());
+            
+            // Add differences analysis
+            result.set("differences", analyzeDifferences(config1, config2));
+            
+            return result;
+        } catch (Exception e) {
+            log.error("Error comparing configurations: {}", e.getMessage());
+            throw new SapBoApiException("Failed to compare configurations", e);
+        }
+    }
+    
+    /**
+     * Get environment by name
+     */
+    private SapBoProperties.BoEnvironment getEnvironmentByName(String name) {
+        if ("source".equalsIgnoreCase(name)) {
+            return sapBoProperties.getSource();
+        } else if ("target".equalsIgnoreCase(name)) {
+            return sapBoProperties.getTarget();
+        } else {
+            // Custom environment lookup logic could be added here
+            log.warn("Unknown environment name: {}", name);
+            return null;
+        }
+    }
+    
+    /**
+     * Analyze differences between two JSON configurations
+     */
+    private JsonNode analyzeDifferences(JsonNode config1, JsonNode config2) {
+        ObjectNode differences = objectMapper.createObjectNode();
+        differences.put("hasDifferences", !config1.equals(config2));
+        
+        // This is a simplified implementation that just checks for equality
+        // A more sophisticated implementation would analyze specific fields and their differences
+        
+        return differences;
     }
 }

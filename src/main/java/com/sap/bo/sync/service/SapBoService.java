@@ -9,6 +9,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 /**
  * Service interface for interacting with SAP Business Objects
  */
@@ -113,4 +115,20 @@ public interface SapBoService {
      * @return List of dependent objects
      */
     List<SapBoObject> getDependencies(String universeId, List<String> dependencyTypes);
+    
+    /**
+     * Get server configuration details
+     * @param configType Type of configuration to retrieve (e.g., "server", "cluster", "database")
+     * @param options Additional options for filtering
+     * @return Server configuration as JSON
+     */
+    JsonNode getServerConfig(String configType, Map<String, String> options);
+    
+    /**
+     * Get cluster configuration details
+     * @param clusterId Optional cluster ID to get configuration for
+     * @param options Additional options for filtering
+     * @return Cluster configuration as JSON
+     */
+    JsonNode getClusterConfig(String clusterId, Map<String, String> options);
 }
