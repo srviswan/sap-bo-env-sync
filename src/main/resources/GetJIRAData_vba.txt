@@ -1,7 +1,7 @@
 Option Explicit
 
 ' Constants for JIRA API configuration
-Const JIRA_BASE_URL As String = "https://your-jira-instance.atlassian.net/rest/api/2/"
+Const JIRA_BASE_URL As String = "https://your-jira-instance.atlassian.net/rest/api/2/" ' Make sure this URL ends with a slash
 Const JIRA_USERNAME As String = "your_email@example.com"
 Const JIRA_API_TOKEN As String = "your_api_token" ' Generate from Atlassian account settings
 
@@ -20,7 +20,7 @@ Sub GetJIRAIssues()
     Dim maxResults As Integer
     
     ' Initialize
-    Set httpRequest = CreateObject("MSXML2.XMLHTTP.6.0")
+    Set httpRequest = CreateObject("WinHttp.WinHttpRequest.5.1") ' Alternative HTTP object that may work better
     Set ws = ActiveSheet
     maxResults = 100 ' Maximum number of results to return
     
@@ -41,8 +41,12 @@ Sub GetJIRAIssues()
     ' Format headers
     ws.Range("A1:I1").Font.Bold = True
     
-    ' Build JQL query - modify as needed for your specific requirements
-    jqlQuery = "project = YourProjectKey ORDER BY updated DESC"
+    ' Build JQL query - using a simpler query for testing
+    jqlQuery = "project = YourProjectKey"
+    
+    ' Debug the query
+    Debug.Print "JQL Query: " & jqlQuery
+    Debug.Print "Encoded Query: " & URLEncode(jqlQuery)
     
     ' Create Basic Authentication header
     authHeader = "Basic " & Base64Encode(JIRA_USERNAME & ":" & JIRA_API_TOKEN)
@@ -62,9 +66,16 @@ Sub GetJIRAIssues()
     End If
     On Error GoTo 0
     
-    ' Check if the request was successful
+    ' Check if the request was successful with enhanced error reporting
     If httpRequest.Status <> 200 Then
-        MsgBox "Error: " & httpRequest.Status & " - " & httpRequest.statusText, vbExclamation
+        MsgBox "Error: " & httpRequest.Status & " - " & httpRequest.statusText & vbCrLf & _
+               "Response: " & httpRequest.responseText, vbExclamation
+        
+        ' Debug information
+        Debug.Print "Full URL: " & JIRA_BASE_URL & "search?jql=" & URLEncode(jqlQuery) & "&maxResults=" & maxResults
+        Debug.Print "Auth Header: Basic [encoded credentials]"
+        Debug.Print "Response: " & httpRequest.responseText
+        
         Exit Sub
     End If
     
@@ -151,31 +162,27 @@ Function ConvertJiraDate(jiraDate As String) As Date
     ConvertJiraDate = CDate(dateStr)
 End Function
 
-' Function to URL encode a string
-Function URLEncode(text As String) As String
+' Function to URL encode a string - improved version
+Function URLEncode(StringToEncode As String) As String
     Dim i As Integer
-    Dim result As String
+    Dim acode As Integer
     Dim char As String
-    Dim asciiVal As Integer
+    Dim Result As String
     
-    result = ""
-    
-    For i = 1 To Len(text)
-        char = Mid(text, i, 1)
-        asciiVal = Asc(char)
-        
-        If (asciiVal >= 48 And asciiVal <= 57) Or _   ' 0-9
-           (asciiVal >= 65 And asciiVal <= 90) Or _   ' A-Z
-           (asciiVal >= 97 And asciiVal <= 122) Then  ' a-z
-            result = result & char
-        ElseIf char = " " Then
-            result = result & "+"
-        Else
-            result = result & "%" & Hex(asciiVal)
-        End If
-    Next i
-    
-    URLEncode = result
+    Result = ""
+    For i = 1 To Len(StringToEncode)
+        char = Mid$(StringToEncode, i, 1)
+        acode = Asc(char)
+        Select Case acode
+            Case 48 To 57, 65 To 90, 97 To 122  ' 0-9, A-Z, a-z
+                Result = Result & char
+            Case 32  ' space
+                Result = Result & "+"
+            Case Else
+                Result = Result & "%" & Right$("0" & Hex(acode), 2)
+        End Select
+    Next
+    URLEncode = Result
 End Function
 
 ' Function to encode string to Base64
@@ -244,3 +251,10 @@ End Function
 ' 6. Update the JIRA_BASE_URL, JIRA_USERNAME, and JIRA_API_TOKEN constants
 ' 7. Update the JQL query to match your project needs
 ' 8. Run the GetJIRAIssues sub
+'
+' Troubleshooting 400 errors:
+' - Verify your JIRA credentials are correct
+' - Check that your project key exists and is spelled correctly
+' - Ensure your account has permissions to access the JIRA project
+' - Try a simpler JQL query first
+' - Check the Debug.Print output in the Immediate window (Ctrl+G) for detailed error info
