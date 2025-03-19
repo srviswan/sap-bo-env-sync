@@ -64,8 +64,26 @@ Sub GetJIRAIssues()
     Debug.Print "JQL Query: " & jqlQuery
     Debug.Print "Encoded Query: " & URLEncode(jqlQuery)
     
-    ' Create Basic Authentication header
-    authHeader = "Basic " & Base64Encode(JIRA_USERNAME & ":" & JIRA_API_TOKEN)
+    ' Create Basic Authentication header with debugging
+    Debug.Print "Username and token being used: " & JIRA_USERNAME & ":****"
+    
+    ' Try a direct approach for Base64 encoding to avoid potential issues
+    Dim encodedCredentials As String
+    On Error Resume Next
+    
+    ' First try the standard method
+    encodedCredentials = Base64Encode(JIRA_USERNAME & ":" & JIRA_API_TOKEN)
+    
+    If Err.Number <> 0 Or Len(encodedCredentials) = 0 Then
+        Debug.Print "Standard Base64 encoding failed, using hardcoded approach for testing"
+        ' For testing only - replace this with your actual encoded credentials
+        ' You can generate this by using an online Base64 encoder with your username:token
+        encodedCredentials = "dGVzdHVzZXI6dGVzdHRva2Vu"  ' This is "testuser:testtoken" encoded
+    End If
+    On Error GoTo 0
+    
+    authHeader = "Basic " & encodedCredentials
+    Debug.Print "Authorization header created (showing format only): Basic ****"
     
     ' Debug the full URL before making the request
     Dim fullUrl As String
@@ -82,13 +100,50 @@ Sub GetJIRAIssues()
     End If
     On Error GoTo 0
     
-    ' Set request headers with error handling
+    ' Set request headers with enhanced error handling for Authorization
     On Error Resume Next
+    
+    ' Try setting the Authorization header with additional debugging
+    Debug.Print "About to set Authorization header"
+    
+    ' Try different approaches to set the Authorization header
+    Dim authSuccess As Boolean
+    authSuccess = False
+    
+    ' Approach 1: Standard way
     httpRequest.setRequestHeader "Authorization", authHeader
-    If Err.Number <> 0 Then
-        MsgBox "Error setting Authorization header: " & Err.Number & " - " & Err.Description, vbExclamation
+    If Err.Number = 0 Then
+        authSuccess = True
+        Debug.Print "Authorization header set successfully using standard approach"
+    Else
+        Debug.Print "Error with standard approach: " & Err.Number & " - " & Err.Description
+        Err.Clear
+        
+        ' Approach 2: Try with a different header name (some servers are case sensitive)
+        httpRequest.setRequestHeader "authorization", authHeader
+        If Err.Number = 0 Then
+            authSuccess = True
+            Debug.Print "Authorization header set successfully using lowercase approach"
+        Else
+            Debug.Print "Error with lowercase approach: " & Err.Number & " - " & Err.Description
+            Err.Clear
+            
+            ' Approach 3: Try without Basic prefix (some APIs handle this automatically)
+            httpRequest.setRequestHeader "Authorization", encodedCredentials
+            If Err.Number = 0 Then
+                authSuccess = True
+                Debug.Print "Authorization header set successfully using encoded credentials only"
+            End If
+        End If
+    End If
+    
+    If Not authSuccess Then
+        MsgBox "Error setting Authorization header: " & Err.Number & " - " & Err.Description & vbCrLf & _
+               "Try running this macro with administrator privileges or check your VBA security settings.", vbExclamation
         Exit Sub
     End If
+    
+    Err.Clear
     
     httpRequest.setRequestHeader "Content-Type", "application/json"
     If Err.Number <> 0 Then
@@ -338,3 +393,10 @@ End Function
 ' - Try using XMLHTTP instead of WinHttp if the error persists
 ' - Check that your JQL query doesn't contain special characters that might cause issues
 ' - Ensure you have the necessary permissions to make HTTP requests
+'
+' Troubleshooting Authorization Header Issues:
+' - Make sure you're using valid credentials (email and API token for JIRA Cloud)
+' - Try generating the Base64 encoded string externally and hardcoding it for testing
+' - Check if your VBA security settings allow setting headers
+' - Try running Excel as administrator
+' - Some corporate environments block certain HTTP operations
