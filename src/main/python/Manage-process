@@ -1,0 +1,288 @@
+
+#!/bin/bash
+
+# Script to find processes matching a PATTERN, then for each,
+# find its 'ultimate parent', display its descendants,
+# provide the ultimate parent's restart command,
+# and optionally kill the ultimate parent and its descendants.
+
+# --- BEGIN FUNCTIONS ---
+
+# Function to get the "ultimate parent" (child of PID 1) for a given PID
+# The "ultimate parent" in this context is the ancestor of the given PID
+# that is a direct child of PID 1 (init/systemd), or PID 1 itself.
+get_ultimate_parent() {
+  local current_pid="$1"
+  local ultimate_parent_pid="$current_pid" # Default to current PID
+
+  # Validate if the process exists
+  if ! ps -p "$current_pid" -o pid= > /dev/null 2>&1; then
+    echo "Error: Process with PID $current_pid does not exist for ultimate parent tracing." >&2
+    return 1
+  fi
+
+  # Handle PID 1 itself
+  if [ "$current_pid" -eq 1 ]; then
+    echo "1"
+    return 0
+  fi
+
+  # Loop to trace ancestry
+  while true; do
+    ppid_output=$(ps -o ppid= -p "$current_pid" 2>/dev/null)
+    ppid=$(echo "$ppid_output" | awk '{print $1}')
+
+    if [ -z "$ppid" ] || ! [[ "$ppid" =~ ^[0-9]+$ ]]; then
+      break
+    fi
+
+    if [ "$ppid" -eq 1 ]; then
+      ultimate_parent_pid="$current_pid"
+      break
+    elif [ "$current_pid" -eq 1 ]; then
+      ultimate_parent_pid="1"
+      break
+    fi
+    current_pid="$ppid"
+  done
+
+  if ! ps -p "$ultimate_parent_pid" -o pid= > /dev/null 2>&1; then
+    echo "Error: The determined ultimate parent PID $ultimate_parent_pid no longer exists or is not accessible." >&2
+    return 1
+  fi
+  echo "$ultimate_parent_pid"
+  return 0
+}
+
+# Function to get all PIDs in the subtree of a given parent PID (including the parent)
+# Returns a space-separated string of PIDs, sorted in reverse numerical order.
+get_all_pids_in_subtree() {
+    local main_parent_pid="$1"
+    local pids_list_array=()
+
+    if ! ps -p "$main_parent_pid" -o pid= > /dev/null 2>&1; then
+        echo "Error: Parent PID $main_parent_pid for subtree listing does not exist." >&2
+        return 1
+    fi
+
+    if command -v pstree > /dev/null; then
+        pids_from_pstree=$(pstree -pU "$main_parent_pid" 2>/dev/null | grep -oP '\(\K[0-9]+(?=\))' || true)
+        all_pids_str="$main_parent_pid $pids_from_pstree"
+        mapfile -t pids_list_array < <(echo "$all_pids_str" | tr ' ' '\n' | grep -E '^[0-9]+$' | sort -unr)
+    else
+        echo "Warning: 'pstree' command not found. Using recursive pgrep for descendants." >&2
+        _get_descendants_recursively() {
+            local current_pid_recurse=$1
+            echo "$current_pid_recurse"
+            local children_pids
+            children_pids=$(pgrep -P "$current_pid_recurse" 2>/dev/null)
+            for child_pid in $children_pids; do
+                _get_descendants_recursively "$child_pid"
+            done
+        }
+        mapfile -t pids_list_array < <(_get_descendants_recursively "$main_parent_pid" | grep -E '^[0-9]+$' | sort -unr)
+    fi
+
+    if [ ${#pids_list_array[@]} -eq 0 ]; then
+        if ps -p "$main_parent_pid" -o pid= > /dev/null 2>&1; then
+             echo "$main_parent_pid"
+        else
+            return 1
+        fi
+    else
+        echo "${pids_list_array[*]}"
+    fi
+    return 0
+}
+
+# --- END FUNCTIONS ---
+
+# --- Main script ---
+kill_processes_flag=0
+PATTERN_INPUT=""
+kill_processes_flag_text="OFF"
+SCRIPT_PID=$$ # Get PID of this script
+
+# Parse options
+while [[ "$1" =~ ^- ]]; do
+  case "$1" in
+    -k | --kill )
+      kill_processes_flag=1
+      kill_processes_flag_text="ON"
+      shift
+      ;;
+    * )
+      echo "Error: Unknown option $1" >&2
+      echo "Usage: $0 [-k | --kill] <PATTERN>"
+      exit 1
+      ;;
+  esac
+done
+
+if [ -z "$1" ]; then
+  echo "Usage: $0 [-k | --kill] <PATTERN>"
+  echo "  <PATTERN>: The pattern to search for in process command lines."
+  echo "  -k, --kill: Attempt to kill the identified ultimate parent and its descendants for each matched process family."
+  exit 1
+fi
+
+PATTERN_INPUT="$1"
+
+echo "Searching for processes matching pattern: '$PATTERN_INPUT'"
+echo "Kill mode for families: $kill_processes_flag_text"
+echo "Script's own PID: $SCRIPT_PID (will be excluded from initial matches)"
+echo "======================================================================"
+
+# Find initial PIDs matching the pattern
+# pgrep -af: -a lists full command line, -f matches against full argument list
+# Exclude the script's own PID and the pgrep command itself
+initial_matched_processes_output=$(pgrep -af "$PATTERN_INPUT" | grep -v "pgrep -af $PATTERN_INPUT" | grep -v "$SCRIPT_PID bash $0")
+
+if [ -z "$initial_matched_processes_output" ]; then
+  echo "No processes found matching the pattern '$PATTERN_INPUT' (excluding this script and pgrep itself)."
+  exit 0
+fi
+
+echo "Initial processes matching pattern '$PATTERN_INPUT':"
+echo "$initial_matched_processes_output"
+echo "======================================================================"
+
+# Process each initially matched PID
+echo "$initial_matched_processes_output" | while IFS= read -r line; do
+  # Extract the PID from the line (pgrep -a output is PID then command)
+  start_pid=$(echo "$line" | awk '{print $1}')
+  start_cmd=$(echo "$line" | awk '{$1=""; print $0}' | sed 's/^[ \t]*//') # Get command part
+
+  if ! [[ "$start_pid" =~ ^[0-9]+$ ]]; then
+    echo "Skipping invalid line from pgrep output: $line"
+    continue
+  fi
+  
+  # Ensure we don't process this script if it somehow got through the grep -v
+  if [ "$start_pid" -eq "$SCRIPT_PID" ]; then
+    echo "Skipping this script (PID $SCRIPT_PID) which was matched by the pattern."
+    echo "----------------------------------------------------------------------"
+    continue
+  fi
+
+  echo ""
+  echo "Processing initially matched PID: $start_pid (Command: $start_cmd)"
+  echo "----------------------------------------------------------------------"
+
+  ULTIMATE_PARENT_PID=$(get_ultimate_parent "$start_pid")
+
+  if [ $? -ne 0 ] || [ -z "$ULTIMATE_PARENT_PID" ]; then
+    echo "Could not determine or access ultimate parent for PID $start_pid. Skipping this process family."
+    echo "----------------------------------------------------------------------"
+    continue
+  fi
+
+  echo "The 'ultimate parent' for PID $start_pid is: PID $ULTIMATE_PARENT_PID"
+  UP_COMMAND_NAME=$(ps -o comm= -p "$ULTIMATE_PARENT_PID" 2>/dev/null || echo "<unknown_process_name>")
+  echo "Command name for ultimate parent PID $ULTIMATE_PARENT_PID: $UP_COMMAND_NAME"
+  echo "----------------------------------------------------------------------"
+
+  # --- Generate command to restart the ultimate parent ---
+  echo "--- To restart this ultimate parent process (PID $ULTIMATE_PARENT_PID) on another machine ---"
+  RESTART_USER=$(ps -o user= -p "$ULTIMATE_PARENT_PID" 2>/dev/null | awk '{print $1}' || echo "<unknown_user>")
+  RESTART_CWD="<cwd_info_unavailable_for_PID_$ULTIMATE_PARENT_PID>"
+  if [ -d "/proc/$ULTIMATE_PARENT_PID/cwd" ]; then
+      RESTART_CWD=$(readlink -f "/proc/$ULTIMATE_PARENT_PID/cwd" 2>/dev/null || echo "<unknown_or_inaccessible_cwd>")
+  fi
+
+  RESTART_COMMAND_STR="<command_info_unavailable_for_PID_$ULTIMATE_PARENT_PID>"
+  if [ -e "/proc/$ULTIMATE_PARENT_PID/cmdline" ]; then
+      cmdline_args_array=()
+      while IFS= read -r -d $'\0' arg; do
+          cmdline_args_array+=("$(printf '%q' "$arg")")
+      done < "/proc/$ULTIMATE_PARENT_PID/cmdline"
+      if [ ${#cmdline_args_array[@]} -gt 0 ]; then
+          RESTART_COMMAND_STR="${cmdline_args_array[*]}"
+      elif [ -n "$UP_COMMAND_NAME" ] && [ "$UP_COMMAND_NAME" != "<unknown_process_name>" ]; then
+          RESTART_COMMAND_STR=$(printf '%q' "$UP_COMMAND_NAME")
+      fi
+  else
+      fallback_args=$(ps -o args= -p "$ULTIMATE_PARENT_PID" --no-headers 2>/dev/null || echo "")
+      if [ -n "$fallback_args" ]; then
+          RESTART_COMMAND_STR="$fallback_args"
+      fi
+  fi
+
+  echo "User: $RESTART_USER"
+  echo "Working Directory (recommended to 'cd' into first):"
+  echo "  cd $(printf '%q' "$RESTART_CWD")"
+  echo "Full Command to execute:"
+  echo "  $RESTART_COMMAND_STR"
+  echo "Note: Environment variables are NOT captured. You may need to set them manually."
+  echo "Consider running as '$RESTART_USER' if not already."
+  echo "----------------------------------------------------------------------"
+
+  # --- List descendants ---
+  echo "--- Current process tree for ultimate parent PID $ULTIMATE_PARENT_PID ---"
+  if command -v pstree > /dev/null; then
+    pstree -pUlas "$ULTIMATE_PARENT_PID" 2>/dev/null || echo "pstree: PID $ULTIMATE_PARENT_PID might have exited or has no children."
+  else
+    echo "pstree command not found. Unable to display full process tree."
+    echo "Direct children of PID $ULTIMATE_PARENT_PID (if any):"
+    pgrep -P "$ULTIMATE_PARENT_PID" | xargs -r ps -f -p
+  fi
+  echo "----------------------------------------------------------------------"
+
+  # --- Kill Logic (if -k or --kill is specified for this family) ---
+  if [ "$kill_processes_flag" -eq 1 ]; then
+    echo "--- Kill Process Mode for family of ultimate parent PID $ULTIMATE_PARENT_PID ---"
+    pids_to_kill_output_str=$(get_all_pids_in_subtree "$ULTIMATE_PARENT_PID")
+
+    if [ $? -ne 0 ] || [ -z "$pids_to_kill_output_str" ]; then
+        echo "No processes found to kill for subtree of $ULTIMATE_PARENT_PID, or the parent process has vanished."
+    else
+        IFS=' ' read -r -a pids_to_kill_array <<< "$pids_to_kill_output_str"
+        if [ ${#pids_to_kill_array[@]} -eq 0 ]; then
+          echo "No processes found in the subtree of $ULTIMATE_PARENT_PID to kill."
+        else
+          echo "The following PIDs (ultimate parent $ULTIMATE_PARENT_PID and its descendants) are targeted for termination:"
+          for pid_k in "${pids_to_kill_array[@]}"; do
+            ps -o pid,ppid,user,stat,etime,args --no-headers -p "$pid_k" 2>/dev/null || echo "PID $pid_k : process info not available"
+          done
+          echo ""
+          
+          # Confirmation for THIS specific family
+          read -r -p "Are you sure you want to send SIGTERM to these ${#pids_to_kill_array[@]} process(es) in the family of PID $ULTIMATE_PARENT_PID? (yes/no): " confirm
+          if [[ "$confirm" == "yes" ]]; then
+            echo "Sending SIGTERM to PIDs: ${pids_to_kill_array[*]}"
+            kill "${pids_to_kill_array[@]}" >/dev/null 2>&1
+            echo "Waiting a few seconds for processes to terminate..."
+            sleep 3
+            remaining_pids=()
+            for pid_k in "${pids_to_kill_array[@]}"; do
+              if ps -p "$pid_k" -o pid= > /dev/null 2>&1; then
+                remaining_pids+=("$pid_k")
+              fi
+            done
+            if [ ${#remaining_pids[@]} -gt 0 ]; then
+              echo ""
+              echo "Processes still running in this family: ${remaining_pids[*]}"
+              ps -o pid,ppid,user,stat,etime,args --no-headers -p "${remaining_pids[@]}" 2>/dev/null
+              echo ""
+              read -r -p "Do you want to send SIGKILL to these remaining ${#remaining_pids[@]} processes in this family? (yes/no): " confirm_sigkill
+              if [[ "$confirm_sigkill" == "yes" ]];
+                then
+                echo "Sending SIGKILL to PIDs: ${remaining_pids[*]}"
+                kill -9 "${remaining_pids[@]}" >/dev/null 2>&1
+                echo "SIGKILL sent for this family."
+              else
+                echo "Remaining processes in this family not forcibly killed with SIGKILL."
+              fi
+            else
+              echo "All targeted processes in this family seem to have terminated after SIGTERM."
+            fi
+          else
+            echo "Kill operation for family of PID $ULTIMATE_PARENT_PID aborted by user."
+          fi
+        fi
+    fi
+  fi
+  echo "======================================================================"
+done
+
+echo "Script finished."
